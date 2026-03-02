@@ -1,0 +1,228 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Link Shortener</title>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body { font-family: -apple-system, sans-serif; background: #f5f5f5; color: #333; }
+        .container { max-width: 600px; margin: 40px auto; padding: 0 20px; }
+        h1 { text-align: center; margin-bottom: 30px; }
+        .card { background: #fff; border-radius: 8px; padding: 20px; margin-bottom: 16px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
+        .card h2 { font-size: 16px; margin-bottom: 12px; }
+        input, button { width: 100%; padding: 10px; border-radius: 6px; border: 1px solid #ddd; font-size: 14px; margin-bottom: 8px; }
+        button { background: #333; color: #fff; border: none; cursor: pointer; }
+        button:hover { background: #555; }
+        .row { display: flex; gap: 8px; }
+        .row input, .row button { flex: 1; }
+        .result { background: #f0f0f0; padding: 10px; border-radius: 6px; margin-top: 8px; word-break: break-all; font-size: 13px; display: none; }
+        .result a { color: #0066cc; }
+        .auth-status { text-align: center; font-size: 13px; color: #888; margin-bottom: 16px; }
+        .auth-status span { color: #333; font-weight: bold; }
+        .stats-table { width: 100%; font-size: 13px; }
+        .stats-table td { padding: 4px 0; }
+        .stats-table td:first-child { color: #888; width: 140px; }
+        .tab-row { display: flex; gap: 4px; margin-bottom: 16px; }
+        .tab { flex: 1; padding: 8px; text-align: center; background: #e0e0e0; border-radius: 6px; cursor: pointer; font-size: 13px; border: none; color: #333; }
+        .tab.active { background: #333; color: #fff; }
+        .section { display: none; }
+        .section.active { display: block; }
+        .error { color: #cc0000; font-size: 13px; margin-top: 4px; }
+        .link-item { padding: 8px 0; border-bottom: 1px solid #eee; font-size: 13px; }
+        .link-item:last-child { border: none; }
+    </style>
+</head>
+<body>
+<div class="container">
+    <h1>Link Shortener</h1>
+
+    <div class="auth-status" id="authStatus">
+        Не авторизован. <a href="#" onclick="showTab('auth')">Войти</a>
+    </div>
+
+    <div class="tab-row">
+        <button class="tab active" onclick="showTab('shorten')">Сократить</button>
+        <button class="tab" onclick="showTab('stats')">Статистика</button>
+        <button class="tab" onclick="showTab('search')">Поиск</button>
+        <button class="tab" onclick="showTab('auth')">Аккаунт</button>
+    </div>
+
+    <div class="section active" id="sec-shorten">
+        <div class="card">
+            <h2>Сократить ссылку</h2>
+            <input type="url" id="longUrl" placeholder="https://example.com/long-url">
+            <input type="text" id="alias" placeholder="Кастомный алиас (необязательно)">
+            <input type="datetime-local" id="expiresAt" placeholder="Срок действия (необязательно)">
+            <button onclick="shortenLink()">Сократить</button>
+            <div class="result" id="shortenResult"></div>
+            <div class="error" id="shortenError"></div>
+        </div>
+    </div>
+
+    <div class="section" id="sec-stats">
+        <div class="card">
+            <h2>Статистика ссылки</h2>
+            <div class="row">
+                <input type="text" id="statsCode" placeholder="Короткий код (например abc123)">
+                <button onclick="getStats()">Показать</button>
+            </div>
+            <div class="result" id="statsResult"></div>
+            <div class="error" id="statsError"></div>
+        </div>
+    </div>
+
+    <div class="section" id="sec-search">
+        <div class="card">
+            <h2>Поиск по URL</h2>
+            <div class="row">
+                <input type="url" id="searchUrl" placeholder="https://example.com">
+                <button onclick="searchLinks()">Найти</button>
+            </div>
+            <div class="result" id="searchResult"></div>
+            <div class="error" id="searchError"></div>
+        </div>
+    </div>
+
+    <div class="section" id="sec-auth">
+        <div class="card">
+            <h2>Вход / Регистрация</h2>
+            <input type="text" id="username" placeholder="Логин">
+            <input type="password" id="password" placeholder="Пароль">
+            <div class="row">
+                <button onclick="login()">Войти</button>
+                <button onclick="register()">Регистрация</button>
+            </div>
+            <button onclick="logout()" style="background:#999;margin-top:4px;">Выйти</button>
+            <div class="error" id="authError"></div>
+        </div>
+    </div>
+</div>
+
+<script>
+const API = '';
+let token = localStorage.getItem('token');
+let currentUser = localStorage.getItem('username');
+
+function headers(json = true) {
+    const h = {};
+    if (json) h['Content-Type'] = 'application/json';
+    if (token) h['Authorization'] = 'Bearer ' + token;
+    return h;
+}
+
+function showTab(name) {
+    document.querySelectorAll('.tab').forEach((t, i) => {
+        const tabs = ['shorten','stats','search','auth'];
+        t.classList.toggle('active', tabs[i] === name);
+    });
+    document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
+    document.getElementById('sec-' + name).classList.add('active');
+}
+
+function updateAuthStatus() {
+    const el = document.getElementById('authStatus');
+    if (token && currentUser) {
+        el.innerHTML = 'Пользователь: <span>' + currentUser + '</span>';
+    } else {
+        el.innerHTML = 'Не авторизован. <a href="#" onclick="showTab(\'auth\')">Войти</a>';
+    }
+}
+
+async function register() {
+    const u = document.getElementById('username').value;
+    const p = document.getElementById('password').value;
+    const err = document.getElementById('authError');
+    err.textContent = '';
+    const res = await fetch(API + '/auth/register', {
+        method: 'POST', headers: headers(), body: JSON.stringify({username: u, password: p})
+    });
+    if (!res.ok) { err.textContent = (await res.json()).detail; return; }
+    await login();
+}
+
+async function login() {
+    const u = document.getElementById('username').value;
+    const p = document.getElementById('password').value;
+    const err = document.getElementById('authError');
+    err.textContent = '';
+    const body = new URLSearchParams({username: u, password: p});
+    const res = await fetch(API + '/auth/login', {method: 'POST', body});
+    if (!res.ok) { err.textContent = 'Неверный логин или пароль'; return; }
+    const data = await res.json();
+    token = data.access_token;
+    currentUser = u;
+    localStorage.setItem('token', token);
+    localStorage.setItem('username', u);
+    updateAuthStatus();
+    showTab('shorten');
+}
+
+function logout() {
+    token = null; currentUser = null;
+    localStorage.removeItem('token');
+    localStorage.removeItem('username');
+    updateAuthStatus();
+}
+
+async function shortenLink() {
+    const url = document.getElementById('longUrl').value;
+    const alias = document.getElementById('alias').value;
+    const exp = document.getElementById('expiresAt').value;
+    const res_el = document.getElementById('shortenResult');
+    const err = document.getElementById('shortenError');
+    res_el.style.display = 'none'; err.textContent = '';
+
+    const body = {original_url: url};
+    if (alias) body.custom_alias = alias;
+    if (exp) body.expires_at = new Date(exp).toISOString();
+
+    const res = await fetch(API + '/links/shorten', {
+        method: 'POST', headers: headers(), body: JSON.stringify(body)
+    });
+    if (!res.ok) { err.textContent = (await res.json()).detail; return; }
+    const data = await res.json();
+    const short = location.origin + '/links/' + data.short_code;
+    res_el.innerHTML = 'Короткая ссылка: <a href="' + short + '" target="_blank">' + short + '</a>';
+    res_el.style.display = 'block';
+}
+
+async function getStats() {
+    const code = document.getElementById('statsCode').value;
+    const res_el = document.getElementById('statsResult');
+    const err = document.getElementById('statsError');
+    res_el.style.display = 'none'; err.textContent = '';
+
+    const res = await fetch(API + '/links/' + code + '/stats', {headers: headers(false)});
+    if (!res.ok) { err.textContent = (await res.json()).detail; return; }
+    const d = await res.json();
+    res_el.innerHTML = '<table class="stats-table">'
+        + '<tr><td>Оригинальный URL</td><td><a href="'+d.original_url+'" target="_blank">'+d.original_url+'</a></td></tr>'
+        + '<tr><td>Создана</td><td>' + new Date(d.created_at).toLocaleString() + '</td></tr>'
+        + '<tr><td>Последний переход</td><td>' + (d.last_used_at ? new Date(d.last_used_at).toLocaleString() : '—') + '</td></tr>'
+        + '<tr><td>Переходов</td><td>' + d.click_count + '</td></tr>'
+        + '<tr><td>Истекает</td><td>' + (d.expires_at ? new Date(d.expires_at).toLocaleString() : '—') + '</td></tr>'
+        + '</table>';
+    res_el.style.display = 'block';
+}
+
+async function searchLinks() {
+    const url = document.getElementById('searchUrl').value;
+    const res_el = document.getElementById('searchResult');
+    const err = document.getElementById('searchError');
+    res_el.style.display = 'none'; err.textContent = '';
+
+    const res = await fetch(API + '/links/search?original_url=' + encodeURIComponent(url), {headers: headers(false)});
+    if (!res.ok) { err.textContent = (await res.json()).detail; return; }
+    const links = await res.json();
+    res_el.innerHTML = links.map(l =>
+        '<div class="link-item"><a href="' + location.origin + '/links/' + l.short_code + '" target="_blank">'
+        + l.short_code + '</a> — ' + new Date(l.created_at).toLocaleString() + '</div>'
+    ).join('');
+    res_el.style.display = 'block';
+}
+
+updateAuthStatus();
+</script>
+</body>
+</html>

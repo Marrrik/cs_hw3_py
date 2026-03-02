@@ -2,7 +2,11 @@ import asyncio
 from contextlib import asynccontextmanager
 from datetime import datetime, timedelta, timezone
 
+from pathlib import Path
+
 from fastapi import FastAPI
+from fastapi.staticfiles import StaticFiles
+from fastapi.responses import FileResponse
 from sqlalchemy import update, delete
 
 from app.config import settings
@@ -52,6 +56,10 @@ app.include_router(auth_router.router)
 app.include_router(links_router.router)
 
 
+STATIC_DIR = Path(__file__).parent / "static"
+app.mount("/static", StaticFiles(directory=STATIC_DIR), name="static")
+
+
 @app.get("/", tags=["health"])
-async def health():
-    return {"status": "ok"}
+async def index():
+    return FileResponse(STATIC_DIR / "index.html")
