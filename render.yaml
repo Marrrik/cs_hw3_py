@@ -24,9 +24,9 @@ services:
     name: linkshortener-redis
     plan: free
     maxmemoryPolicy: allkeys-lru
+    ipAllowList: []
 
 databases:
   - name: linkshortener-db
     plan: free
     databaseName: linkshortener
-    user: postgres
