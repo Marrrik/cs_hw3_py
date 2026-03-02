@@ -7,11 +7,19 @@ class Settings(BaseSettings):
     secret_key: str = "super-secret-key-change-in-production"
     algorithm: str = "HS256"
     access_token_expire_minutes: int = 60
-    # Unused links cleanup: delete links not used for N days (0 = disabled)
     unused_links_days: int = 0
-    cache_ttl: int = 300  # seconds
+    cache_ttl: int = 300
 
     model_config = {"env_file": ".env"}
+
+    @property
+    def async_database_url(self) -> str:
+        url = self.database_url
+        if url.startswith("postgres://"):
+            url = url.replace("postgres://", "postgresql+asyncpg://", 1)
+        elif url.startswith("postgresql://"):
+            url = url.replace("postgresql://", "postgresql+asyncpg://", 1)
+        return url
 
 
 settings = Settings()
