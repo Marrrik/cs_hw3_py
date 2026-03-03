@@ -1,0 +1,10 @@
+[run]
+source = app
+concurrency = greenlet
+omit = tests/*
+
+[report]
+show_missing = true
+
+[html]
+directory = htmlcov
